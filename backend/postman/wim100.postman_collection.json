@@ -1,0 +1,108 @@
+{
+  "info": {
+    "name": "wim100 backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "listar candidatas",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/candidatas"
+      }
+    },
+    {
+      "name": "obtener candidata",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/candidatas/1"
+      }
+    },
+    {
+      "name": "crear candidata",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://localhost:8080/api/candidatas",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Antonia Pérez\",\n  \"correo\": \"antonia.perez@mail.com\",\n  \"rut\": \"20.111.222-2\",\n  \"telefono\": \"+56 9 7777 8888\",\n  \"cargo\": \"Backend Developer\",\n  \"experiencia\": \"4 años\"\n}"
+        }
+      }
+    },
+    {
+      "name": "crear con correo repetido (409)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://localhost:8080/api/candidatas",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Antonia Pérez\",\n  \"correo\": \"antonia.perez@mail.com\",\n  \"rut\": \"20.111.222-2\",\n  \"telefono\": \"+56 9 7777 8888\",\n  \"cargo\": \"Backend Developer\",\n  \"experiencia\": \"4 años\"\n}"
+        }
+      }
+    },
+    {
+      "name": "crear con datos malos (400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://localhost:8080/api/candidatas",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"\",\n  \"correo\": \"malo\",\n  \"rut\": \"\",\n  \"cargo\": \"\"\n}"
+        }
+      }
+    },
+    {
+      "name": "editar candidata",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "http://localhost:8080/api/candidatas/4",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Antonia Pérez\",\n  \"correo\": \"antonia.perez@mail.com\",\n  \"rut\": \"20.111.222-2\",\n  \"telefono\": \"+56 9 7777 8888\",\n  \"cargo\": \"Desarrolladora Full Stack\",\n  \"experiencia\": \"4 años\",\n  \"puntaje\": 75.5,\n  \"estado\": \"Evaluada\",\n  \"observacion\": \"buena entrevista tecnica\"\n}"
+        }
+      }
+    },
+    {
+      "name": "eliminar candidata",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "http://localhost:8080/api/candidatas/4"
+      }
+    },
+    {
+      "name": "obtener eliminada (404)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "http://localhost:8080/api/candidatas/4"
+      }
+    }
+  ]
+}
