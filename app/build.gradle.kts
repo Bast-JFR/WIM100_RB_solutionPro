@@ -21,6 +21,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    // para que las clases de android no rompan las pruebas unitarias
+    testOptions { unitTests.isReturnDefaultValues = true }
 }
 
 dependencies {
@@ -40,5 +42,10 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    // pruebas unitarias
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
