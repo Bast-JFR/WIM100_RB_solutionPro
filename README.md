@@ -50,11 +50,18 @@ backend (spring boot 3 + java 17 + mysql), carpeta `backend`:
 - `exception`: excepciones propias y manejador global (400, 404, 409)
 - `config`: carga de datos de prueba al iniciar
 
+## despliegue en la nube
+
+- microservicio: render (docker), `https://wim100-rb-solutionpro-2.onrender.com/api/candidatas`
+- base de datos: supabase (postgresql), conexion por session pooler
+- variables de entorno en render: `DB_URL`, `DB_USER`, `DB_PASSWORD` (en local, sin variables, se usa mysql en docker)
+- el plan gratis de render se duerme tras 15 minutos sin uso, la primera peticion puede tardar unos 50 segundos
+
 ## endpoints
 
 ### microservicio propio
 
-base: `http://localhost:8080/api`
+base en la nube: `https://wim100-rb-solutionpro-2.onrender.com/api` · en local: `http://localhost:8080/api`
 
 | metodo | ruta | uso | respuestas |
 |---|---|---|---|

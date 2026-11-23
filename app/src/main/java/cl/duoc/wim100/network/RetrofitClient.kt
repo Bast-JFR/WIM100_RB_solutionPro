@@ -8,11 +8,10 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // ip del pc en la red local (ipconfig), asi el celular fisico llega al backend
-    // el celular y el pc tienen que estar en la misma red
-    // para el emulador tambien sirve http://10.0.2.2:8080/api/ (es el localhost del pc)
+    // microservicio desplegado en render (base de datos en supabase), funciona desde cualquier red
+    // para probar el backend en local: emulador http://10.0.2.2:8080/api/ o celular http://<ip-del-pc>:8080/api/
     // la url siempre tiene que terminar en /
-    const val BACKEND_URL = "http://192.168.1.139:8080/api/"
+    const val BACKEND_URL = "https://wim100-rb-solutionpro-2.onrender.com/api/"
 
     // api externa
     const val RANDOM_USER_URL = "https://randomuser.me/"
@@ -24,8 +23,8 @@ object RetrofitClient {
 
     private val client = OkHttpClient.Builder()
         .addInterceptor(logging)
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .build()
 
     private fun crearRetrofit(baseUrl: String): Retrofit {
