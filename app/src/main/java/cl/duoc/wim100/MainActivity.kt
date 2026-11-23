@@ -51,6 +51,17 @@ fun WIM100App(vm: SelectionViewModel = viewModel(factory = SelectionViewModel.Fa
     var page by remember { mutableStateOf(Page.HOME) }
     var showAdd by remember { mutableStateOf(false) }
     var selectedCandidate by remember { mutableStateOf<Candidate?>(null) }
+    var candidateToEdit by remember { mutableStateOf<Candidate?>(null) }
+
+    // mensajes del servidor (exito o error) se muestran en un snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    val mensaje = vm.mensaje
+    LaunchedEffect(mensaje) {
+        if (mensaje != null) {
+            snackbarHostState.showSnackbar(mensaje)
+            vm.limpiarMensaje()
+        }
+    }
 
     if (!userSession.isLoggedIn) {
         LoginScreen(
@@ -63,6 +74,7 @@ fun WIM100App(vm: SelectionViewModel = viewModel(factory = SelectionViewModel.Fa
         )
     } else {
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 Surface(shadowElevation = 2.dp, color = MaterialTheme.colorScheme.surface) {
                     Row(
@@ -174,7 +186,9 @@ fun WIM100App(vm: SelectionViewModel = viewModel(factory = SelectionViewModel.Fa
                         Page.CANDIDATES -> CandidatesScreen(
                             candidates = candidates,
                             onAdd = { showAdd = true },
-                            onSelect = { selectedCandidate = it }
+                            onSelect = { selectedCandidate = it },
+                            onRefresh = { vm.refrescar() },
+                            cargando = vm.cargando
                         )
                         Page.EVALUATION -> EvaluationScreen(
                             candidates = candidates,
@@ -201,6 +215,28 @@ fun WIM100App(vm: SelectionViewModel = viewModel(factory = SelectionViewModel.Fa
             )
         }
 
+        // UPDATE: mismo formulario pero con los datos cargados
+        candidateToEdit?.let { candidate ->
+            AddCandidateDialog(
+                candidate = candidate,
+                onDismiss = { candidateToEdit = null },
+                onSave = { name, email, rut, phone, role, experience, cv ->
+                    vm.updateCandidate(
+                        candidate.copy(
+                            name = name.trim(),
+                            email = email.trim(),
+                            rut = rut.trim(),
+                            phone = phone.trim(),
+                            role = role.trim(),
+                            experience = experience.trim(),
+                            cvUri = cv
+                        )
+                    )
+                    candidateToEdit = null
+                }
+            )
+        }
+
         selectedCandidate?.let { candidate ->
             if (page == Page.CANDIDATES) {
                 CandidateDetailDialog(
@@ -208,6 +244,10 @@ fun WIM100App(vm: SelectionViewModel = viewModel(factory = SelectionViewModel.Fa
                     onDismiss = { selectedCandidate = null },
                     onDelete = {
                         vm.deleteCandidate(candidate.id)
+                        selectedCandidate = null
+                    },
+                    onEdit = {
+                        candidateToEdit = candidate
                         selectedCandidate = null
                     }
                 )

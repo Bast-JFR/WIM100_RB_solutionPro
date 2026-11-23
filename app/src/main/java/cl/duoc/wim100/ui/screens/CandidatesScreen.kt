@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,7 +23,9 @@ import cl.duoc.wim100.ui.components.CandidateCard
 fun CandidatesScreen(
     candidates: List<Candidate>,
     onAdd: () -> Unit,
-    onSelect: (Candidate) -> Unit
+    onSelect: (Candidate) -> Unit,
+    onRefresh: () -> Unit = {},
+    cargando: Boolean = false
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
@@ -40,13 +43,22 @@ fun CandidatesScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Candidatas", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text("${candidates.size} registros en base local")
+                Text("${candidates.size} registros sincronizados con el servidor")
+            }
+            // READ: vuelve a pedir la lista al microservicio
+            IconButton(onClick = onRefresh) {
+                Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
             }
             Button(onClick = onAdd) {
                 Icon(Icons.Default.Add, null)
                 Spacer(Modifier.width(4.dp))
                 Text("Agregar")
             }
+        }
+
+        if (cargando) {
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(Modifier.fillMaxWidth())
         }
 
         Spacer(Modifier.height(10.dp))

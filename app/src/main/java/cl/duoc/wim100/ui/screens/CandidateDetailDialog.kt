@@ -2,6 +2,7 @@ package cl.duoc.wim100.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -11,7 +12,8 @@ import cl.duoc.wim100.model.Candidate
 fun CandidateDetailDialog(
     candidate: Candidate,
     onDismiss: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -31,7 +33,10 @@ fun CandidateDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cerrar") }
+            Row {
+                TextButton(onClick = onEdit) { Text("Editar") }
+                TextButton(onClick = onDismiss) { Text("Cerrar") }
+            }
         },
         dismissButton = {
             TextButton(

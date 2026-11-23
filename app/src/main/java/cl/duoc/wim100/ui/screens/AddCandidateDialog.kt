@@ -13,20 +13,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cl.duoc.wim100.domain.FormValidators
+import cl.duoc.wim100.model.Candidate
 import cl.duoc.wim100.ui.components.ValidatedTextField
 
 @Composable
 fun AddCandidateDialog(
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String, String, String, String) -> Unit
+    onSave: (String, String, String, String, String, String, String) -> Unit,
+    candidate: Candidate? = null // si viene una candidata el dialogo sirve para editar
 ) {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var rut by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf("") }
-    var experience by remember { mutableStateOf("") }
-    var cvUri by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(candidate?.name ?: "") }
+    var email by remember { mutableStateOf(candidate?.email ?: "") }
+    var rut by remember { mutableStateOf(candidate?.rut ?: "") }
+    var phone by remember { mutableStateOf(candidate?.phone ?: "") }
+    var role by remember { mutableStateOf(candidate?.role ?: "") }
+    var experience by remember { mutableStateOf(candidate?.experience ?: "") }
+    var cvUri by remember { mutableStateOf(candidate?.cvUri ?: "") }
 
     var nameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
@@ -40,7 +42,7 @@ fun AddCandidateDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Registrar candidata") },
+        title = { Text(if (candidate == null) "Registrar candidata" else "Editar candidata") },
         text = {
             Column(
                 Modifier
