@@ -74,8 +74,62 @@ class SelectionViewModelTest {
 
         val vm = crearViewModel()
 
-        assertEquals("No se pudo conectar con el servidor, revisa que el backend esté corriendo", vm.mensaje)
+        assertEquals("Sin conexión con el servidor, trabajando en modo local", vm.mensaje)
+        assertTrue(vm.modoLocal)
         assertFalse(vm.cargando)
+    }
+
+    @Test
+    fun `sin conexion y sin datos se rellena con 3 candidatas de ejemplo`() {
+        coEvery { repository.refrescar() } throws IOException("sin conexion")
+        coEvery { repository.getCandidateCount() } returns 0
+
+        crearViewModel()
+
+        coVerify(exactly = 3) { repository.insertCandidate(any()) }
+    }
+
+    @Test
+    fun `sin conexion pero con datos no se rellena`() {
+        coEvery { repository.refrescar() } throws IOException("sin conexion")
+        coEvery { repository.getCandidateCount() } returns 5
+
+        crearViewModel()
+
+        coVerify(exactly = 0) { repository.insertCandidate(any()) }
+    }
+
+    @Test
+    fun `importar desde la api externa agrega las candidatas`() {
+        val nuevas = listOf(camila.copy(id = 0, name = "Lucia Gomez"), camila.copy(id = 0, name = "Sara Ruiz"))
+        coEvery { randomUserRepository.obtenerCandidatas(2) } returns nuevas
+        val vm = crearViewModel()
+
+        vm.importarDesdeApiExterna(2)
+
+        coVerify { repository.insertCandidate(match { it.name == "Lucia Gomez" }) }
+        coVerify { repository.insertCandidate(match { it.name == "Sara Ruiz" }) }
+        assertEquals("Se importaron 2 candidatas desde la API externa", vm.mensaje)
+    }
+
+    @Test
+    fun `si falla la importacion se avisa`() {
+        coEvery { randomUserRepository.obtenerCandidatas(any()) } throws IOException("sin internet")
+        val vm = crearViewModel()
+
+        vm.importarDesdeApiExterna()
+
+        assertTrue(vm.mensaje!!.startsWith("API externa no disponible"))
+    }
+
+    @Test
+    fun `guardar sin conexion avisa que quedo en el celular`() {
+        every { repository.modoLocal } returns true
+        val vm = crearViewModel()
+
+        vm.addCandidate("Camila Rojas", "camila@mail.com", "18.234.567-9", "", "QA", "", "")
+
+        assertEquals("Candidata guardada en el celular (sin conexión)", vm.mensaje)
     }
 
     @Test

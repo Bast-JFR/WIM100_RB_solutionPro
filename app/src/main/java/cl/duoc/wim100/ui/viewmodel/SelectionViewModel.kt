@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -66,6 +67,10 @@ class SelectionViewModel(
     var mensaje by mutableStateOf<String?>(null)
         private set
 
+    // true cuando la app trabaja sin servidor (solo con room)
+    var modoLocal by mutableStateOf(false)
+        private set
+
     // datos que llegan de la api externa para el formulario
     var datosSugeridos by mutableStateOf<DatosSugeridos?>(null)
         private set
@@ -80,8 +85,13 @@ class SelectionViewModel(
             cargando = true
             try {
                 repository.refrescar()
+                modoLocal = false
+            } catch (e: IOException) {
+                // sin conexion: la app sigue funcionando con los datos del celular
+                modoLocal = true
+                mensaje = "Sin conexión con el servidor, trabajando en modo local"
+                rellenarSiEstaVacia()
             } catch (e: Exception) {
-                // si el backend esta apagado se sigue mostrando la copia local
                 mensaje = e.mensajeAmigable()
             } finally {
                 cargando = false
@@ -91,6 +101,41 @@ class SelectionViewModel(
 
     fun limpiarMensaje() {
         mensaje = null
+    }
+
+    // si no hay servidor y el celular no tiene datos se carga con candidatas de ejemplo
+    private suspend fun rellenarSiEstaVacia() {
+        if (repository.getCandidateCount() > 0) return
+        val ejemplos = listOf(
+            Candidate(name = "Camila Rojas", email = "camila.rojas@mail.com", rut = "18.234.567-9", phone = "+56 9 1111 2222", role = "Desarrolladora Android", experience = "2 años", score = 82.0, status = "En evaluación"),
+            Candidate(name = "Valentina Soto", email = "valentina.soto@mail.com", rut = "19.876.543-0", phone = "+56 9 3333 4444", role = "Analista QA", experience = "3 años", score = 91.0, status = "Seleccionada"),
+            Candidate(name = "Fernanda Díaz", email = "fernanda.diaz@mail.com", rut = "17.654.321-3", phone = "+56 9 5555 6666", role = "Desarrolladora Android", experience = "1 año", status = "Pendiente")
+        )
+        for (c in ejemplos) {
+            repository.insertCandidate(c)
+        }
+        log("Base local inicializada con candidatas de ejemplo (modo sin conexión)")
+    }
+
+    // API EXTERNA: importa candidatas de ejemplo desde randomuser.me
+    // se guardan en el servidor si hay conexion, si no quedan en el celular
+    fun importarDesdeApiExterna(cantidad: Int = 3) {
+        viewModelScope.launch {
+            cargando = true
+            try {
+                val nuevas = randomUserRepository.obtenerCandidatas(cantidad)
+                for (c in nuevas) {
+                    repository.insertCandidate(c)
+                }
+                modoLocal = repository.modoLocal
+                mensaje = "Se importaron ${nuevas.size} candidatas desde la API externa"
+                log("Se importaron ${nuevas.size} candidatas desde randomuser.me")
+            } catch (e: Exception) {
+                mensaje = "API externa no disponible: ${e.mensajeAmigable()}"
+            } finally {
+                cargando = false
+            }
+        }
     }
 
     // API EXTERNA: pide un nombre y correo de ejemplo a randomuser.me
@@ -173,7 +218,8 @@ class SelectionViewModel(
                     cvUri = cv
                 )
                 repository.insertCandidate(candidate)
-                mensaje = "Candidata registrada"
+                modoLocal = repository.modoLocal
+                mensaje = if (modoLocal) "Candidata guardada en el celular (sin conexión)" else "Candidata registrada"
                 log("Se registró a ${name.trim()} (RUT: ${rut.trim()})")
                 notificationHelper.showNotification(
                     title = "Nueva Candidata Registrada",
@@ -190,7 +236,8 @@ class SelectionViewModel(
         viewModelScope.launch {
             try {
                 repository.updateCandidate(candidate)
-                mensaje = "Datos actualizados"
+                modoLocal = repository.modoLocal
+                mensaje = if (modoLocal) "Cambios guardados en el celular (sin conexión)" else "Datos actualizados"
                 log("Se editaron los datos de ${candidate.name}")
             } catch (e: Exception) {
                 mensaje = e.mensajeAmigable()
@@ -249,6 +296,7 @@ class SelectionViewModel(
                 val candidate = candidates.value.firstOrNull { it.id == id }
                 val name = candidate?.name ?: "Candidata"
                 repository.deleteCandidate(id)
+                modoLocal = repository.modoLocal
                 mensaje = "Candidata eliminada"
                 log("Se eliminó el registro de $name")
             } catch (e: Exception) {

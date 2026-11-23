@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -25,7 +27,9 @@ fun CandidatesScreen(
     onAdd: () -> Unit,
     onSelect: (Candidate) -> Unit,
     onRefresh: () -> Unit = {},
-    cargando: Boolean = false
+    cargando: Boolean = false,
+    onImportar: () -> Unit = {},
+    modoLocal: Boolean = false
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
@@ -43,7 +47,10 @@ fun CandidatesScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Candidatas", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Text("${candidates.size} registros sincronizados con el servidor")
+                Text(
+                    if (modoLocal) "${candidates.size} registros guardados en el celular"
+                    else "${candidates.size} registros sincronizados con el servidor"
+                )
             }
             // READ: vuelve a pedir la lista al microservicio
             IconButton(onClick = onRefresh) {
@@ -53,6 +60,31 @@ fun CandidatesScreen(
                 Icon(Icons.Default.Add, null)
                 Spacer(Modifier.width(4.dp))
                 Text("Agregar")
+            }
+        }
+
+        // API EXTERNA: trae candidatas de ejemplo desde randomuser.me
+        OutlinedButton(onClick = onImportar, modifier = Modifier.padding(top = 6.dp)) {
+            Icon(Icons.Default.CloudDownload, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text("Importar candidatas (API externa)")
+        }
+
+        // aviso cuando no hay conexion con el microservicio
+        if (modoLocal) {
+            Spacer(Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CloudOff, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Modo sin conexión: los cambios se guardan en el celular y se suben al servidor cuando vuelva la conexión (botón actualizar).",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
 

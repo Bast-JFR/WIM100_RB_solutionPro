@@ -13,10 +13,13 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
+import java.io.IOException
 
 // se prueba la logica del repositorio
 // el dao (room) y la api (retrofit) se reemplazan por mocks, asi no se necesita emulador ni servidor
@@ -80,7 +83,7 @@ class CandidateRepositoryTest {
 
         repository.refrescar()
 
-        coVerify { candidateDao.deleteAll() }
+        coVerify { candidateDao.deleteAllRemote() }
     }
 
     @Test
@@ -127,6 +130,88 @@ class CandidateRepositoryTest {
         coEvery { api.eliminar(3L) } returns Response.error(500, "".toResponseBody())
 
         repository.deleteCandidate(3)
+    }
+
+    // ---------- modo sin conexion ----------
+
+    @Test
+    fun `sin conexion la candidata se guarda en el celular con id negativo`() = runTest {
+        coEvery { api.crear(any()) } throws IOException("sin red")
+        coEvery { candidateDao.getMinId() } returns 3
+
+        val local = repository.insertCandidate(candidata())
+
+        assertEquals(-1, local.id)
+        assertTrue(repository.modoLocal)
+        coVerify { candidateDao.insertCandidate(match { it.id == -1 }) }
+    }
+
+    @Test
+    fun `las ids locales siguen bajando para no repetirse`() = runTest {
+        coEvery { api.crear(any()) } throws IOException("sin red")
+        coEvery { candidateDao.getMinId() } returns -4
+
+        assertEquals(-5, repository.insertCandidate(candidata()).id)
+    }
+
+    @Test
+    fun `refrescar sube primero las candidatas pendientes`() = runTest {
+        val pendiente = candidata(id = -1)
+        coEvery { candidateDao.getAllOnce() } returns listOf(pendiente)
+        coEvery { api.crear(any()) } returns dto(20)
+        coEvery { api.listar() } returns listOf(dto(20))
+
+        repository.refrescar()
+
+        coVerify { api.crear(match { it.id == null }) }
+        coVerify { candidateDao.deleteCandidateById(-1) }
+        assertFalse(repository.modoLocal)
+    }
+
+    @Test
+    fun `si la pendiente ya existe en el servidor se borra la copia local`() = runTest {
+        coEvery { candidateDao.getAllOnce() } returns listOf(candidata(id = -2))
+        coEvery { api.crear(any()) } throws HttpException(Response.error<Any>(409, "".toResponseBody()))
+        coEvery { api.listar() } returns emptyList()
+
+        repository.refrescar()
+
+        coVerify { candidateDao.deleteCandidateById(-2) }
+    }
+
+    @Test(expected = IOException::class)
+    fun `refrescar sin conexion avisa el error y queda en modo local`() = runTest {
+        coEvery { candidateDao.getAllOnce() } returns emptyList()
+        coEvery { api.listar() } throws IOException("sin red")
+
+        try {
+            repository.refrescar()
+        } finally {
+            assertTrue(repository.modoLocal)
+        }
+    }
+
+    @Test
+    fun `editar o eliminar una candidata local no llama al servidor`() = runTest {
+        repository.updateCandidate(candidata(id = -3))
+        repository.deleteCandidate(-3)
+
+        coVerify(exactly = 0) { api.actualizar(any(), any()) }
+        coVerify(exactly = 0) { api.eliminar(any()) }
+        coVerify { candidateDao.deleteCandidateById(-3) }
+    }
+
+    @Test
+    fun `sin conexion editar y eliminar trabajan sobre la copia local`() = runTest {
+        coEvery { api.actualizar(any(), any()) } throws IOException("sin red")
+        coEvery { api.eliminar(any()) } throws IOException("sin red")
+
+        repository.updateCandidate(candidata(id = 7).copy(role = "QA"))
+        repository.deleteCandidate(7)
+
+        coVerify { candidateDao.insertCandidate(match { it.id == 7 && it.role == "QA" }) }
+        coVerify { candidateDao.deleteCandidateById(7) }
+        assertTrue(repository.modoLocal)
     }
 
     @Test

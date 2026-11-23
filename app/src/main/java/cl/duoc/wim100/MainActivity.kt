@@ -188,7 +188,9 @@ fun WIM100App(vm: SelectionViewModel = viewModel(factory = SelectionViewModel.Fa
                             onAdd = { showAdd = true },
                             onSelect = { selectedCandidate = it },
                             onRefresh = { vm.refrescar() },
-                            cargando = vm.cargando
+                            cargando = vm.cargando,
+                            onImportar = { vm.importarDesdeApiExterna() },
+                            modoLocal = vm.modoLocal
                         )
                         Page.EVALUATION -> EvaluationScreen(
                             candidates = candidates,

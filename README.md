@@ -16,9 +16,10 @@ proyecto de la evaluacion parcial 4 de desarrollo de aplicaciones moviles (dsy11
 - crud de candidatas conectado al microservicio: listar, crear, editar y eliminar desde la app
 - evaluacion con puntaje ponderado (tecnico 50%, comunicacion 20%, experiencia 30%), se guarda en el servidor
 - resolucion de direccion (seleccionada / no seleccionada), tambien se guarda en el servidor
-- copia local en room: si el backend esta apagado la app sigue mostrando la ultima lista y avisa el error
+- modo sin conexion: si el backend no responde la app sigue funcionando con room (crear, editar y eliminar en el celular). lo creado sin conexion se sube solo al servidor cuando vuelve la conexion
+- si no hay servidor y el celular esta vacio, la app se rellena sola con 3 candidatas de ejemplo
 - historial de acciones guardado en room
-- api externa (randomuser.me) para sugerir un nombre y correo de ejemplo en el formulario
+- api externa (randomuser.me): sugerir nombre y correo en el formulario, e importar candidatas de ejemplo desde la pantalla candidatas
 - notificaciones, llamar y compartir candidata (funciones nativas)
 
 ## arquitectura
@@ -83,6 +84,17 @@ requisitos: android studio, intellij idea, jdk 17 o superior y mysql 8 (o docker
 2. levantar el backend: abrir la carpeta `backend` en intellij y ejecutar `BackendApplication`. la base `wim100` y la tabla se crean solas y se cargan 3 candidatas de prueba
 3. ejecutar la app: abrir la raiz del proyecto en android studio, sincronizar gradle y ejecutar en el emulador
 4. celular fisico: el celular y el pc tienen que estar en la misma red wifi. cambiar `BACKEND_URL` en `app/src/main/java/cl/duoc/wim100/network/RetrofitClient.kt` por la ip del pc (se ve con `ipconfig`), por ejemplo `http://192.168.1.50:8080/api/`, y permitir el puerto 8080 en el firewall de windows
+
+## modo sin conexion
+
+el repositorio intenta primero el microservicio. si falla por red (IOException) pasa a modo local:
+
+- crear: se guarda en room con id negativo (pendiente de subir)
+- editar y eliminar: se aplican sobre la copia local
+- al volver la conexion (al abrir la app o con el boton actualizar) se suben las pendientes y se descarga la lista oficial
+- en la pantalla candidatas aparece un aviso de modo sin conexion
+
+asi la app se puede mostrar en un celular sin backend. para mostrar el crud real contra el microservicio se usa el emulador en el mismo pc del backend (`http://10.0.2.2:8080/api/`).
 
 ## pruebas unitarias
 

@@ -4,14 +4,15 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 // api externa publica (randomuser.me), no necesita key
-// se usa solo para sugerir datos ficticios en el formulario
+// se usa para sugerir datos en el formulario y para importar candidatas de ejemplo
 interface RandomUserApi {
 
     @GET("api/")
     suspend fun generar(
         @Query("gender") genero: String = "female",
         @Query("nat") nacionalidad: String = "es",
-        @Query("inc") campos: String = "name,email"
+        @Query("inc") campos: String = "name,email",
+        @Query("results") cantidad: Int = 1
     ): RandomUserResponse
 }
 

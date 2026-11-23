@@ -30,9 +30,13 @@ interface CandidateDao {
     suspend fun getAllOnce(): List<Candidate>
 
     // borra las copias locales que ya no existen en el servidor
-    @Query("DELETE FROM candidates WHERE id NOT IN (:ids)")
+    // las de id negativo no se tocan porque son las creadas sin conexion (pendientes)
+    @Query("DELETE FROM candidates WHERE id > 0 AND id NOT IN (:ids)")
     suspend fun deleteNotIn(ids: List<Int>)
 
-    @Query("DELETE FROM candidates")
-    suspend fun deleteAll()
+    @Query("DELETE FROM candidates WHERE id > 0")
+    suspend fun deleteAllRemote()
+
+    @Query("SELECT MIN(id) FROM candidates")
+    suspend fun getMinId(): Int?
 }
