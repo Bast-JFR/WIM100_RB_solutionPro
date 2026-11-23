@@ -43,7 +43,7 @@ private enum class Page(val label: String) {
 }
 
 @Composable
-fun WIM100App(vm: SelectionViewModel = viewModel()) {
+fun WIM100App(vm: SelectionViewModel = viewModel(factory = SelectionViewModel.Factory)) {
     val candidates by vm.candidates.collectAsState()
     val history by vm.history.collectAsState()
     val userSession = vm.userSession

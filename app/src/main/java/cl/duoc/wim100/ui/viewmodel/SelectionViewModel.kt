@@ -4,8 +4,11 @@ import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import cl.duoc.wim100.data.AppDatabase
 import cl.duoc.wim100.data.CandidateRepository
 import cl.duoc.wim100.data.SessionPreferences
@@ -13,6 +16,8 @@ import cl.duoc.wim100.domain.NotificationHelper
 import cl.duoc.wim100.model.Candidate
 import cl.duoc.wim100.model.HistoryEntry
 import cl.duoc.wim100.model.UserSession
+import cl.duoc.wim100.network.RetrofitClient
+import cl.duoc.wim100.network.mensajeAmigable
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -21,12 +26,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class SelectionViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val db = AppDatabase.getInstance(application)
-    private val repository = CandidateRepository(db.candidateDao(), db.historyDao())
-    private val sessionPreferences = SessionPreferences(application)
-    private val notificationHelper = NotificationHelper(application)
+// las dependencias llegan por el constructor, asi en las pruebas se pueden reemplazar por mocks
+class SelectionViewModel(
+    private val repository: CandidateRepository,
+    private val sessionPreferences: SessionPreferences,
+    private val notificationHelper: NotificationHelper
+) : ViewModel() {
 
     val candidates: StateFlow<List<Candidate>> = repository.allCandidates.stateIn(
         scope = viewModelScope,
@@ -51,23 +56,34 @@ class SelectionViewModel(application: Application) : AndroidViewModel(applicatio
     )
         private set
 
+    // estado de las llamadas al servidor, lo usan las pantallas
+    var cargando by mutableStateOf(false)
+        private set
+
+    var mensaje by mutableStateOf<String?>(null)
+        private set
+
     init {
-        // Seed initial data into Room DB safely
+        // al abrir la app se piden las candidatas al microservicio
+        refrescar()
+    }
+
+    fun refrescar() {
         viewModelScope.launch {
+            cargando = true
             try {
-                if (repository.getCandidateCount() == 0) {
-                    val demoCandidates = listOf(
-                        Candidate(name = "Camila Rojas", email = "camila.rojas@mail.com", rut = "18.234.567-8", phone = "+56 9 1111 2222", role = "Desarrolladora Android", experience = "2 años", score = 82.0, status = "En evaluación"),
-                        Candidate(name = "Valentina Soto", email = "valentina.soto@mail.com", rut = "19.876.543-2", phone = "+56 9 3333 4444", role = "Analista QA", experience = "3 años", score = 91.0, status = "Seleccionada"),
-                        Candidate(name = "Fernanda Díaz", email = "fernanda.diaz@mail.com", rut = "17.654.321-0", phone = "+56 9 5555 6666", role = "Desarrolladora Android", experience = "1 año", score = 68.0, status = "No seleccionada")
-                    )
-                    demoCandidates.forEach { repository.insertCandidate(it) }
-                    repository.addHistory(HistoryEntry(date = today(), text = "Base de datos Room inicializada con postulantes demo"))
-                }
+                repository.refrescar()
             } catch (e: Exception) {
-                e.printStackTrace()
+                // si el backend esta apagado se sigue mostrando la copia local
+                mensaje = e.mensajeAmigable()
+            } finally {
+                cargando = false
             }
         }
+    }
+
+    fun limpiarMensaje() {
+        mensaje = null
     }
 
     fun login(email: String, role: String = "Evaluadora") {
@@ -120,6 +136,7 @@ class SelectionViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    // CREATE
     fun addCandidate(name: String, email: String, rut: String, phone: String, role: String, experience: String, cv: String) {
         viewModelScope.launch {
             try {
@@ -133,13 +150,27 @@ class SelectionViewModel(application: Application) : AndroidViewModel(applicatio
                     cvUri = cv
                 )
                 repository.insertCandidate(candidate)
+                mensaje = "Candidata registrada"
                 log("Se registró a ${name.trim()} (RUT: ${rut.trim()})")
                 notificationHelper.showNotification(
                     title = "Nueva Candidata Registrada",
                     message = "${name.trim()} postula al cargo $role"
                 )
             } catch (e: Exception) {
-                e.printStackTrace()
+                mensaje = e.mensajeAmigable()
+            }
+        }
+    }
+
+    // UPDATE: editar los datos de una candidata
+    fun updateCandidate(candidate: Candidate) {
+        viewModelScope.launch {
+            try {
+                repository.updateCandidate(candidate)
+                mensaje = "Datos actualizados"
+                log("Se editaron los datos de ${candidate.name}")
+            } catch (e: Exception) {
+                mensaje = e.mensajeAmigable()
             }
         }
     }
@@ -148,8 +179,7 @@ class SelectionViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             try {
                 val total = technical * 0.5 + communication * 0.2 + experience * 0.3
-                val currentCandidates = candidates.value
-                val candidate = currentCandidates.firstOrNull { it.id == id }
+                val candidate = candidates.value.firstOrNull { it.id == id }
                 if (candidate != null) {
                     val updated = candidate.copy(
                         score = total,
@@ -164,7 +194,7 @@ class SelectionViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                mensaje = e.mensajeAmigable()
             }
         }
     }
@@ -172,8 +202,7 @@ class SelectionViewModel(application: Application) : AndroidViewModel(applicatio
     fun resolve(id: Int, selected: Boolean) {
         viewModelScope.launch {
             try {
-                val currentCandidates = candidates.value
-                val candidate = currentCandidates.firstOrNull { it.id == id }
+                val candidate = candidates.value.firstOrNull { it.id == id }
                 if (candidate != null) {
                     val statusText = if (selected) "Seleccionada" else "No seleccionada"
                     val updated = candidate.copy(status = statusText)
@@ -185,20 +214,22 @@ class SelectionViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                mensaje = e.mensajeAmigable()
             }
         }
     }
 
+    // DELETE
     fun deleteCandidate(id: Int) {
         viewModelScope.launch {
             try {
                 val candidate = candidates.value.firstOrNull { it.id == id }
                 val name = candidate?.name ?: "Candidata"
                 repository.deleteCandidate(id)
+                mensaje = "Candidata eliminada"
                 log("Se eliminó el registro de $name")
             } catch (e: Exception) {
-                e.printStackTrace()
+                mensaje = e.mensajeAmigable()
             }
         }
     }
@@ -215,5 +246,15 @@ class SelectionViewModel(application: Application) : AndroidViewModel(applicatio
 
     companion object {
         private fun today() = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+
+        // fabrica del viewmodel: aca se crean las dependencias reales
+        val Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as Application
+                val db = AppDatabase.getInstance(app)
+                val repository = CandidateRepository(db.candidateDao(), db.historyDao(), RetrofitClient.candidataApi)
+                SelectionViewModel(repository, SessionPreferences(app), NotificationHelper(app))
+            }
+        }
     }
 }

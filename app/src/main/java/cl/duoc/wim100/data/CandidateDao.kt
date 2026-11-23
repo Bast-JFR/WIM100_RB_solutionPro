@@ -12,6 +12,10 @@ interface CandidateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCandidate(candidate: Candidate)
 
+    // guarda de una la lista que llega del servidor
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCandidates(candidates: List<Candidate>)
+
     @Update
     suspend fun updateCandidate(candidate: Candidate)
 
@@ -20,4 +24,15 @@ interface CandidateDao {
 
     @Query("SELECT COUNT(*) FROM candidates")
     suspend fun getCandidateCount(): Int
+
+    // lista normal (sin flow) para usarla dentro del repositorio
+    @Query("SELECT * FROM candidates")
+    suspend fun getAllOnce(): List<Candidate>
+
+    // borra las copias locales que ya no existen en el servidor
+    @Query("DELETE FROM candidates WHERE id NOT IN (:ids)")
+    suspend fun deleteNotIn(ids: List<Int>)
+
+    @Query("DELETE FROM candidates")
+    suspend fun deleteAll()
 }
