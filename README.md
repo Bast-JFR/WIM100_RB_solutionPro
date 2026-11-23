@@ -1,82 +1,111 @@
-# WIM100 - Sistema de Gestión de Selección de Talento TI
+# wim100 - gestion de seleccion de candidatas
 
-Aplicación nativa en Android desarrollada en **Kotlin** con **Jetpack Compose** y **Material Design 3** para la gestión, evaluación y selección de candidatas del programa **WIM100**.
+app movil para el programa wim100 (women in management). permite registrar candidatas, evaluarlas con una pauta ponderada y que direccion resuelva si quedan seleccionadas o no.
 
----
+proyecto de la evaluacion parcial 4 de desarrollo de aplicaciones moviles (dsy1105), duoc uc.
 
-## 📦 Cumplimiento de Requisitos del Proyecto
+## integrantes
 
-### 1. Interfaz visual organizada y navegación clara
-* Diseño moderno y responsivo con **Jetpack Compose** y **Material 3**.
-* Navegación clara estructurada en 5 secciones principales mediante `NavigationBar` inferior:
-  * 🏠 **Inicio:** Perfil estilo LinkedIn con banner, avatar, titular profesional, resumen, aptitudes y métricas clave del proceso.
-  * 👥 **Candidatas:** Lista de postulantes con búsqueda en tiempo real e interacciones.
-  * 📊 **Evaluaciones:** Ponderación y calificación de competencias técnicas.
-  * 🏆 **Resultados:** Ranking ordenado por puntaje acumulado y decisiones de Dirección.
-  * 📜 **Historial:** Auditoría de eventos registrados durante la sesión.
+- bastian jofre (Bast-JFR)
+- renato colipe (RCL0666)
 
-### 2. Formularios validados con íconos y mensajes visuales
-* Implementación del componente `ValidatedTextField`:
-  * Retroalimentación visual inmediata (íconos de validación ✔️ y ❌ en cada campo).
-  * Bordes rojos y mensajes de error explicativos animados en tiempo real.
-* Formulario de **Login** con validación estricta de correo de prueba (`usuario@demo.cl`).
-* Formulario de **Registro de Candidata** con campos obligatorios validados (Nombre, Correo, Cargo, Teléfono) y selección de currículum PDF.
+## funcionalidades
 
-### 3. Validaciones manejadas desde lógica (Desacopladas de la UI)
-* La lógica de validación se encuentra desacoplada en el módulo `cl.duoc.wim100.domain.FormValidators`.
-* Retorna objetos `ValidationResult` con estado `isValid` y mensajes de error `errorMessage` sin acoplar la interfaz de usuario.
+- login y registro de usuaria con formularios validados (correo, rut con digito verificador)
+- roles evaluadora y direccion
+- crud de candidatas conectado al microservicio: listar, crear, editar y eliminar desde la app
+- evaluacion con puntaje ponderado (tecnico 50%, comunicacion 20%, experiencia 30%), se guarda en el servidor
+- resolucion de direccion (seleccionada / no seleccionada), tambien se guarda en el servidor
+- copia local en room: si el backend esta apagado la app sigue mostrando la ultima lista y avisa el error
+- historial de acciones guardado en room
+- api externa (randomuser.me) para sugerir un nombre y correo de ejemplo en el formulario
+- notificaciones, llamar y compartir candidata (funciones nativas)
 
-### 4. Animaciones funcionales
-* `AnimatedContent` para transiciones fluidas entre pantallas.
-* `AnimatedVisibility` para aparición/desaparición progresiva de mensajes de error y diálogos.
-* Desplazamiento y renderizado animado de controles interactivos (*Sliders* de evaluación).
+## arquitectura
 
-### 5. Estructura modular y persistencia local (MVVM)
-* **Arquitectura limpia MVVM:**
-  * `model`: Entidades de datos (`Candidate`, `HistoryEntry`, `UserSession`).
-  * `data`: **Room Database** (`AppDatabase`, `CandidateDao`, `HistoryDao`), `CandidateRepository` y `SessionPreferences` (SharedPreferences).
-  * `domain`: Validadores independientes (`FormValidators`), Notificaciones y Acciones nativas.
-  * `ui`: Componentes Compose reutilizables, Temas y Pantallas.
-  * `viewmodel`: `SelectionViewModel` con `StateFlow` y Corrutinas.
-* **Persistencia Local:** Los datos de postulantes e historial se almacenan localmente en la base de datos **Room (SQLite)** y la sesión del usuario se mantiene mediante **SharedPreferences**.
+app (kotlin + jetpack compose, mvvm):
 
-### 6. Acceso a Recursos Nativos del Dispositivo
-* 📄 **Document Picker (Storage API):** Selección de currículum PDF mediante `ActivityResultContracts.OpenDocument()`.
-* 🔔 **Notificaciones del Sistema (NotificationManager):** Notificaciones nativas al registrar o evaluar postulantes.
-* 📞 **Icnos de Acción Directa (Intent.ACTION_DIAL & Intent.ACTION_SEND):**
-  * Realización de llamadas telefónicas a postulantes.
-  * Compartición de la ficha técnica de la candidata por aplicaciones externas.
+```
+pantalla (compose) -> SelectionViewModel -> CandidateRepository -> CandidataApi (retrofit) -> backend
+                                                                -> CandidateDao (room, copia local)
+                   -> RandomUserRepository -> RandomUserApi (retrofit) -> randomuser.me
+```
 
----
+paquetes de la app (`app/src/main/java/cl/duoc/wim100`):
 
-## 🛠️ Guía para Repositorio en GitHub y Tablero Trello
+- `model`: entidades de room (Candidate, HistoryEntry, UserSession)
+- `data`: dao, base de datos room, repositorios y sesion
+- `network`: retrofit, interfaces de las apis, dto, mapper y mensajes de error
+- `domain`: validadores, notificaciones y acciones nativas
+- `ui`: pantallas, componentes y viewmodel
 
-### Configuración en GitHub
-1. Inicializar repositorio git:
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: Proyecto completo WIM100 con Room, MVVM y Compose"
-   git remote add origin https://github.com/TU_USUARIO/wim100-android.git
-   git branch -M main
-   git push -u origin main
-   ```
+backend (spring boot 3 + java 17 + mysql), carpeta `backend`:
 
-### Estructura en Trello
-Crea un tablero llamado **WIM100 Android App** con las siguientes columnas:
-* 📋 **Backlog / Por Hacer:**
-  * Configurar estructura MVVM y Room Database.
-  * Implementar Login con validación `usuario@demo.cl`.
-  * Diseñar perfil estilo LinkedIn en Pantalla de Inicio.
-  * Integrar recursos nativos (Llamadas, Compartir, PDF Picker, Notificaciones).
-* ⚙️ **En Proceso:**
-  * Pruebas de validación en formularios con `FormValidators`.
-* ✅ **Completado:**
-  * Compilación y verificación final del proyecto.
+- `model`: entidad Candidata (tabla candidatas)
+- `repository`: CandidataRepository (jpa)
+- `dto`: CandidataRequest con validaciones y ErrorResponse
+- `service`: reglas de negocio (correo unico, estado inicial pendiente)
+- `controller`: endpoints rest
+- `exception`: excepciones propias y manejador global (400, 404, 409)
+- `config`: carga de datos de prueba al iniciar
 
----
+## endpoints
 
-## 🚀 Compilación y Ejecución
-1. Abrir el proyecto en **Android Studio**.
-2. Sincronizar Gradle (`Sync Project with Gradle Files`).
-3. Ejecutar en emulador o dispositivo físico Android (API 24+).
+### microservicio propio
+
+base: `http://localhost:8080/api`
+
+| metodo | ruta | uso | respuestas |
+|---|---|---|---|
+| GET | /candidatas | listar | 200 |
+| GET | /candidatas/{id} | obtener una | 200, 404 |
+| POST | /candidatas | crear | 201, 400, 409 |
+| PUT | /candidatas/{id} | editar, evaluar o resolver | 200, 400, 404, 409 |
+| DELETE | /candidatas/{id} | eliminar | 204, 404 |
+
+la coleccion de postman esta en `backend/postman/wim100.postman_collection.json`.
+
+### api externa
+
+`GET https://randomuser.me/api/?gender=female&nat=es&inc=name,email`
+
+publica y sin key. se usa solo para sugerir datos en el formulario, no guarda nada en el microservicio.
+
+diferencia: el microservicio es nuestro, lo controlamos y guarda los datos oficiales en mysql. la api externa es de terceros, solo se consulta y si se cae la app sigue funcionando.
+
+## pasos para ejecutar
+
+requisitos: android studio, intellij idea, jdk 17 o superior y mysql 8 (o docker).
+
+1. levantar mysql
+   - con docker: `docker run -d --name wim100-mysql -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 mysql:8.0`
+   - o con un mysql instalado, revisando usuario y clave en `backend/src/main/resources/application.properties`
+2. levantar el backend: abrir la carpeta `backend` en intellij y ejecutar `BackendApplication`. la base `wim100` y la tabla se crean solas y se cargan 3 candidatas de prueba
+3. ejecutar la app: abrir la raiz del proyecto en android studio, sincronizar gradle y ejecutar en el emulador
+4. celular fisico: el celular y el pc tienen que estar en la misma red wifi. cambiar `BACKEND_URL` en `app/src/main/java/cl/duoc/wim100/network/RetrofitClient.kt` por la ip del pc (se ve con `ipconfig`), por ejemplo `http://192.168.1.50:8080/api/`, y permitir el puerto 8080 en el firewall de windows
+
+## pruebas unitarias
+
+estan en `app/src/test` y usan junit 4, mockk y kotlinx-coroutines-test. se mockea la api (retrofit), los dao (room), la sesion y las notificaciones, asi no se necesita emulador ni servidor.
+
+- `CandidateRepositoryTest`: sincronizacion con el servidor, crear, editar y eliminar (incluye 404 y 500)
+- `SelectionViewModelTest`: carga inicial, errores de red, crud, puntaje ponderado, resolucion, sesion y api externa
+- `FormValidatorsTest`: rut, correo, nombre, telefono y cargo
+- `CandidataMapperTest`, `ErroresTest`, `RandomUserRepositoryTest`
+
+para correrlas: clic derecho en la carpeta `app/src/test` > run tests (o `run with coverage` para ver la cobertura).
+
+## apk firmado
+
+- llave: `app/wim100-release.jks` (alias `wim100`)
+- la firma esta configurada en `app/build.gradle.kts` (signingConfigs release)
+- para generar: build > generate signed app bundle or apk > apk, o en la terminal `gradlew assembleRelease`
+- el apk queda en `app/build/outputs/apk/release/app-release.apk` y se copia a la carpeta `apk/` del repo
+
+ojo: en un proyecto real la llave y sus claves no se suben a un repo publico, aca se deja porque la pauta lo pide.
+
+capturas del apk y la llave: carpeta `docs/capturas`.
+
+## planificacion
+
+tablero de trello con las tareas repartidas entre los dos integrantes. el historial de commits del repo muestra el trabajo de cada uno.
