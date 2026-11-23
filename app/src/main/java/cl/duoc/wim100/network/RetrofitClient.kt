@@ -13,6 +13,9 @@ object RetrofitClient {
     // la url siempre tiene que terminar en /
     const val BACKEND_URL = "http://10.0.2.2:8080/api/"
 
+    // api externa
+    const val RANDOM_USER_URL = "https://randomuser.me/"
+
     // muestra en el logcat cada peticion y respuesta (filtrar por okhttp)
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
@@ -34,5 +37,10 @@ object RetrofitClient {
 
     val candidataApi: CandidataApi by lazy {
         crearRetrofit(BACKEND_URL).create(CandidataApi::class.java)
+    }
+
+    // otra instancia con otra url base, asi no se mezcla con el microservicio
+    val randomUserApi: RandomUserApi by lazy {
+        crearRetrofit(RANDOM_USER_URL).create(RandomUserApi::class.java)
     }
 }

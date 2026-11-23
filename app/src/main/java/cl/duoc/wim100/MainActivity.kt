@@ -207,6 +207,9 @@ fun WIM100App(vm: SelectionViewModel = viewModel(factory = SelectionViewModel.Fa
 
         if (showAdd) {
             AddCandidateDialog(
+                datosSugeridos = vm.datosSugeridos,
+                onGenerarDatos = { vm.generarDatosSugeridos() },
+                onDatosUsados = { vm.limpiarDatosSugeridos() },
                 onDismiss = { showAdd = false },
                 onSave = { name, email, rut, phone, role, experience, cv ->
                     vm.addCandidate(name, email, rut, phone, role, experience, cv)

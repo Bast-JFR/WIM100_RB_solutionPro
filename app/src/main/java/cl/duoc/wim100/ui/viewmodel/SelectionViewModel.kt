@@ -11,6 +11,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import cl.duoc.wim100.data.AppDatabase
 import cl.duoc.wim100.data.CandidateRepository
+import cl.duoc.wim100.data.DatosSugeridos
+import cl.duoc.wim100.data.RandomUserRepository
 import cl.duoc.wim100.data.SessionPreferences
 import cl.duoc.wim100.domain.NotificationHelper
 import cl.duoc.wim100.model.Candidate
@@ -30,7 +32,8 @@ import java.util.Locale
 class SelectionViewModel(
     private val repository: CandidateRepository,
     private val sessionPreferences: SessionPreferences,
-    private val notificationHelper: NotificationHelper
+    private val notificationHelper: NotificationHelper,
+    private val randomUserRepository: RandomUserRepository
 ) : ViewModel() {
 
     val candidates: StateFlow<List<Candidate>> = repository.allCandidates.stateIn(
@@ -63,6 +66,10 @@ class SelectionViewModel(
     var mensaje by mutableStateOf<String?>(null)
         private set
 
+    // datos que llegan de la api externa para el formulario
+    var datosSugeridos by mutableStateOf<DatosSugeridos?>(null)
+        private set
+
     init {
         // al abrir la app se piden las candidatas al microservicio
         refrescar()
@@ -84,6 +91,22 @@ class SelectionViewModel(
 
     fun limpiarMensaje() {
         mensaje = null
+    }
+
+    // API EXTERNA: pide un nombre y correo de ejemplo a randomuser.me
+    // no guarda nada en el servidor, solo completa el formulario
+    fun generarDatosSugeridos() {
+        viewModelScope.launch {
+            try {
+                datosSugeridos = randomUserRepository.obtenerDatosSugeridos()
+            } catch (e: Exception) {
+                mensaje = "API externa no disponible: ${e.mensajeAmigable()}"
+            }
+        }
+    }
+
+    fun limpiarDatosSugeridos() {
+        datosSugeridos = null
     }
 
     fun login(email: String, role: String = "Evaluadora") {
@@ -253,7 +276,8 @@ class SelectionViewModel(
                 val app = this[APPLICATION_KEY] as Application
                 val db = AppDatabase.getInstance(app)
                 val repository = CandidateRepository(db.candidateDao(), db.historyDao(), RetrofitClient.candidataApi)
-                SelectionViewModel(repository, SessionPreferences(app), NotificationHelper(app))
+                val randomUserRepository = RandomUserRepository(RetrofitClient.randomUserApi)
+                SelectionViewModel(repository, SessionPreferences(app), NotificationHelper(app), randomUserRepository)
             }
         }
     }

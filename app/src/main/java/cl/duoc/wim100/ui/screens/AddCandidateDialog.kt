@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cl.duoc.wim100.data.DatosSugeridos
 import cl.duoc.wim100.domain.FormValidators
 import cl.duoc.wim100.model.Candidate
 import cl.duoc.wim100.ui.components.ValidatedTextField
@@ -20,7 +21,10 @@ import cl.duoc.wim100.ui.components.ValidatedTextField
 fun AddCandidateDialog(
     onDismiss: () -> Unit,
     onSave: (String, String, String, String, String, String, String) -> Unit,
-    candidate: Candidate? = null // si viene una candidata el dialogo sirve para editar
+    candidate: Candidate? = null, // si viene una candidata el dialogo sirve para editar
+    datosSugeridos: DatosSugeridos? = null,
+    onGenerarDatos: (() -> Unit)? = null,
+    onDatosUsados: () -> Unit = {}
 ) {
     var name by remember { mutableStateOf(candidate?.name ?: "") }
     var email by remember { mutableStateOf(candidate?.email ?: "") }
@@ -36,6 +40,17 @@ fun AddCandidateDialog(
     var phoneError by remember { mutableStateOf<String?>(null) }
     var roleError by remember { mutableStateOf<String?>(null) }
 
+    // cuando llegan los datos de la api externa se ponen en el formulario
+    LaunchedEffect(datosSugeridos) {
+        if (datosSugeridos != null) {
+            name = datosSugeridos.nombre
+            email = datosSugeridos.correo
+            nameError = null
+            emailError = null
+            onDatosUsados()
+        }
+    }
+
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         cvUri = uri?.toString().orEmpty()
     }
@@ -50,6 +65,14 @@ fun AddCandidateDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (onGenerarDatos != null) {
+                    TextButton(onClick = onGenerarDatos) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Sugerir nombre y correo (API externa)")
+                    }
+                }
+
                 ValidatedTextField(
                     value = name,
                     onValueChange = {
