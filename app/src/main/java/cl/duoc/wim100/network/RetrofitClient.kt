@@ -8,10 +8,11 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    // 10.0.2.2 es el localhost del pc visto desde el emulador
-    // si se usa un celular fisico hay que poner la ip del pc (ipconfig), ej: http://192.168.1.50:8080/api/
+    // ip del pc en la red local (ipconfig), asi el celular fisico llega al backend
+    // el celular y el pc tienen que estar en la misma red
+    // para el emulador tambien sirve http://10.0.2.2:8080/api/ (es el localhost del pc)
     // la url siempre tiene que terminar en /
-    const val BACKEND_URL = "http://10.0.2.2:8080/api/"
+    const val BACKEND_URL = "http://192.168.1.139:8080/api/"
 
     // api externa
     const val RANDOM_USER_URL = "https://randomuser.me/"
