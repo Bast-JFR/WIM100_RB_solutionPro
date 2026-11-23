@@ -15,6 +15,24 @@ android {
         versionCode = 1
         versionName = "1.0"
     }
+
+    // firma del apk release con la llave wim100-release.jks (queda en la carpeta app)
+    // en un proyecto real las claves no se suben al repo, aca se deja porque la pauta lo pide
+    signingConfigs {
+        create("release") {
+            storeFile = file("wim100-release.jks")
+            storePassword = "wim100duoc"
+            keyAlias = "wim100"
+            keyPassword = "wim100duoc"
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
